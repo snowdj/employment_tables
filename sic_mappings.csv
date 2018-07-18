@@ -1,0 +1,169 @@
+sic,description,sector,sic2,sub_sector_categories
+32.12,Manufacture of jewellery and related articles,creative,32,Crafts 
+58.11,Book publishing,creative,58,Publishing
+58.12,Publishing of directories and mailing lists,creative,58,Publishing
+58.13,Publishing of newspapers,creative,58,Publishing
+58.14,Publishing of journals and periodicals,creative,58,Publishing
+58.19,Other publishing activities,creative,58,Publishing
+58.21,Publishing of computer games,creative,58,"IT, software and computer services"
+58.29,Other software publishing,creative,58,"IT, software and computer services"
+59.11,"Motion picture, video and television programme production activities",creative,59,"Film, TV, video, radio and photography"
+59.12,"Motion picture, video and television programme post-production activities",creative,59,"Film, TV, video, radio and photography"
+59.13,"Motion picture, video and television programme distribution activities",creative,59,"Film, TV, video, radio and photography"
+59.14,Motion picture projection activities,creative,59,"Film, TV, video, radio and photography"
+59.2,Sound recording and music publishing activities,creative,59,"Music, performing and visual arts"
+60.1,Radio broadcasting,creative,60,"Film, TV, video, radio and photography"
+60.2,Television programming and broadcasting activities,creative,60,"Film, TV, video, radio and photography"
+62.01,Computer programming activities,creative,62,"IT, software and computer services"
+62.02,Computer consultancy activities,creative,62,"IT, software and computer services"
+70.21,Public relations and communication activities,creative,70,Advertising and marketing
+71.11,Architectural activities,creative,71,Architecture 
+73.11,Advertising agencies,creative,73,Advertising and marketing
+73.12,Media representation,creative,73,Advertising and marketing
+74.1,Specialised design activities,creative,74,Design and designer fashion 
+74.2,Photographic activities,creative,74,"Film, TV, video, radio and photography"
+74.3,Translation and interpretation activities,creative,74,Publishing
+85.52,Cultural education,creative,85,"Music, performing and visual arts"
+90.01,Performing arts,creative,90,"Music, performing and visual arts"
+90.02,Support activities to performing arts,creative,90,"Music, performing and visual arts"
+90.03,Artistic creation,creative,90,"Music, performing and visual arts"
+90.04,Operation of arts facilities,creative,90,"Music, performing and visual arts"
+91.01,Library and archive activities,creative,91,"Museums, galleries and Libraries "
+91.02,Museum activities,creative,91,"Museums, galleries and Libraries "
+26.11,Manufacture of electronic components,digital,26,Manufacturing of electronics and computers    
+26.12,Manufacture of loaded electronic boards,digital,26,Manufacturing of electronics and computers    
+26.2,Manufacture of computers and peripheral equipment,digital,26,Manufacturing of electronics and computers    
+26.3,Manufacture of communication equipment,digital,26,Manufacturing of electronics and computers    
+26.4,Manufacture of consumer electronics,digital,26,Manufacturing of electronics and computers    
+26.8,Manufacture of magnetic and optical media,digital,26,Manufacturing of electronics and computers    
+46.51,"Wholesale of computers, computer peripheral equipment and software",digital,46,Wholesale of computers and electronics    
+46.52,Wholesale of electronic and telecommunications equipment and parts,digital,46,Wholesale of computers and electronics    
+58.11,Book publishing,digital,58,Publishing (excluding translation and interpretation activities)       
+58.12,Publishing of directories and mailing lists,digital,58,Publishing (excluding translation and interpretation activities)       
+58.13,Publishing of newspapers,digital,58,Publishing (excluding translation and interpretation activities)       
+58.14,Publishing of journals and periodicals,digital,58,Publishing (excluding translation and interpretation activities)       
+58.19,Other publishing activities,digital,58,Publishing (excluding translation and interpretation activities)       
+58.21,Publishing of computer games,digital,58,Software publishing       
+58.29,Other software publishing,digital,58,Software publishing       
+59.11,"Motion picture, video and television programme production activities",digital,59,"Film, TV, video, radio and music   "
+59.12,"Motion picture, video and television programme post-production activities",digital,59,"Film, TV, video, radio and music   "
+59.13,"Motion picture, video and television programme distribution activities",digital,59,"Film, TV, video, radio and music   "
+59.14,Motion picture projection activities,digital,59,"Film, TV, video, radio and music   "
+59.2,Sound recording and music publishing activities,digital,59,"Film, TV, video, radio and music   "
+60.1,Radio broadcasting,digital,60,"Film, TV, video, radio and music   "
+60.2,Television programming and broadcasting activities,digital,60,"Film, TV, video, radio and music   "
+61.1,Wired telecommunications activities,digital,61,Telecommunications        
+61.2,Wireless telecommunications activities,digital,61,Telecommunications        
+61.3,Satellite telecommunications activities,digital,61,Telecommunications        
+61.9,Other telecommunications activities,digital,61,Telecommunications        
+62.01,Computer programming activities,digital,62,"Computer programming, consultancy and related activities        "
+62.02,Computer consultancy activities,digital,62,"Computer programming, consultancy and related activities        "
+62.03,Computer facilities management activities,digital,62,"Computer programming, consultancy and related activities        "
+62.09,Other information technology and computer service activities,digital,62,"Computer programming, consultancy and related activities        "
+63.11,"Data processing, hosting and related activities",digital,63,Information service activities      
+63.12,Web portals,digital,63,Information service activities      
+63.91,News agency activities,digital,63,Information service activities      
+63.99,Other information service activities n.e.c.,digital,63,Information service activities      
+95.11,Repair of computers and peripheral equipment,digital,95,Repair of computers and communication equipment
+95.12,Repair of communication equipment,digital,95,Repair of computers and communication equipment
+32.12,Manufacture of jewellery and related articles,culture,32,Crafts
+59.11,"Motion picture, video and television programme production activities",culture,59,"Film, TV and music"
+59.12,"Motion picture, video and television programme post-production activities",culture,59,"Film, TV and music"
+59.13,"Motion picture, video and television programme distribution activities",culture,59,"Film, TV and music"
+59.14,Motion picture projection activities,culture,59,"Film, TV and music"
+59.2,Sound recording and music publishing activities,culture,59,"Film, TV and music"
+60.1,Radio broadcasting,culture,60,Radio
+60.2,Television programming and broadcasting activities,culture,60,"Film, TV and music"
+74.2,Photographic activities,culture,74,Photography
+85.52,Cultural education,culture,85,Cultural education
+90.01,Performing arts,culture,90,Arts
+90.02,Support activities to performing arts,culture,90,Arts
+90.03,Artistic creation,culture,90,Arts
+90.04,Operation of arts facilities,culture,90,Arts
+91.01,Library and archive activities,culture,91,Library and archives
+91.02,Museum activities,culture,91,Museums and galleries
+18.2,Reproduction of recorded media ,culture,18,"Film, TV and music"
+32.2,Manufacture of musical instruments,culture,32,"Film, TV and music"
+47.63,Retail sale of music and video recordings in specialised stores,culture,47,"Film, TV and music"
+91.03,Operation of historical sites and buildings and similar visitor attractions,culture,91,Heritage
+61.1,Wired telecommunications activities,telecoms,61,
+61.2,Wireless telecommunications activities,telecoms,61,
+61.3,Satellite telecommunications activities,telecoms,61,
+61.9,Other telecommunications activities,telecoms,61,
+92,Gambling and betting activities,gambling,92,
+32.3,Manufacture of sports goods,sport,32,
+47.64,"Retail sale of sports goods, fishing gear, camping goods, boats and bicycles",sport,47,
+93.11,Operation of sports facilities,sport,93,
+93.12,Activities of sports clubs,sport,93,
+93.13,Fitness facilities,sport,93,
+93.19,Other sports activities,sport,93,
+77.21,Renting and leasing of recreational and sports goods ,sport,77,
+85.51,Sports and recreation education ,sport,85,
+30.12,Building of pleasure and sporting boats,sport,30.1,
+62.011,Tourism,tourism,62,
+26.11,Manufacture of electronic components,all_dcms,26,
+26.12,Manufacture of loaded electronic boards,all_dcms,26,
+26.2,Manufacture of computers and peripheral equipment,all_dcms,26,
+26.3,Manufacture of communication equipment,all_dcms,26,
+26.4,Manufacture of consumer electronics,all_dcms,26,
+26.8,Manufacture of magnetic and optical media,all_dcms,26,
+32.12,Manufacture of jewellery and related articles,all_dcms,32,
+46.51,"Wholesale of computers, computer peripheral equipment and software",all_dcms,46,
+46.52,Wholesale of electronic and telecommunications equipment and parts,all_dcms,46,
+58.11,Book publishing,all_dcms,58,
+58.12,Publishing of directories and mailing lists,all_dcms,58,
+58.13,Publishing of newspapers,all_dcms,58,
+58.14,Publishing of journals and periodicals,all_dcms,58,
+58.19,Other publishing activities,all_dcms,58,
+58.21,Publishing of computer games,all_dcms,58,
+58.29,Other software publishing,all_dcms,58,
+59.11,"Motion picture, video and television programme production activities",all_dcms,59,
+59.12,"Motion picture, video and television programme post-production activities",all_dcms,59,
+59.13,"Motion picture, video and television programme distribution activities",all_dcms,59,
+59.14,Motion picture projection activities,all_dcms,59,
+59.2,Sound recording and music publishing activities,all_dcms,59,
+60.1,Radio broadcasting,all_dcms,60,
+60.2,Television programming and broadcasting activities,all_dcms,60,
+61.1,Wired telecommunications activities,all_dcms,61,
+61.2,Wireless telecommunications activities,all_dcms,61,
+61.3,Satellite telecommunications activities,all_dcms,61,
+61.9,Other telecommunications activities,all_dcms,61,
+62.01,Computer programming activities,all_dcms,62,
+62.02,Computer consultancy activities,all_dcms,62,
+62.03,Computer facilities management activities,all_dcms,62,
+62.09,Other information technology and computer service activities,all_dcms,62,
+63.11,"Data processing, hosting and related activities",all_dcms,63,
+63.12,Web portals,all_dcms,63,
+63.91,News agency activities,all_dcms,63,
+63.99,Other information service activities n.e.c.,all_dcms,63,
+70.21,Public relations and communication activities,all_dcms,70,
+71.11,Architectural activities,all_dcms,71,
+73.11,Advertising agencies,all_dcms,73,
+73.12,Media representation,all_dcms,73,
+74.1,Specialised design activities,all_dcms,74,
+74.2,Photographic activities,all_dcms,74,
+74.3,Translation and interpretation activities,all_dcms,74,
+85.52,Cultural education,all_dcms,85,
+90.01,Performing arts,all_dcms,90,
+90.02,Support activities to performing arts,all_dcms,90,
+90.03,Artistic creation,all_dcms,90,
+90.04,Operation of arts facilities,all_dcms,90,
+91.01,Library and archive activities,all_dcms,91,
+91.02,Museum activities,all_dcms,91,
+92,Gambling and betting activities,all_dcms,92,
+95.11,Repair of computers and peripheral equipment,all_dcms,95,
+95.12,Repair of communication equipment,all_dcms,95,
+32.3,Manufacture of sports goods,all_dcms,32,
+47.64,"Retail sale of sports goods, fishing gear, camping goods, boats and bicycles",all_dcms,47,
+93.11,Operation of sports facilities,all_dcms,93,
+93.12,Activities of sports clubs,all_dcms,93,
+93.13,Fitness facilities,all_dcms,93,
+93.19,Other sports activities,all_dcms,93,
+18.2,Reproduction of recorded media ,all_dcms,18,
+32.2,Manufacture of musical instruments,all_dcms,32,
+47.63,Retail sale of music and video recordings in specialised stores,all_dcms,47,
+91.03,Operation of historical sites and buildings and similar visitor attractions,all_dcms,91,
+77.21,Renting and leasing of recreational and sports goods ,all_dcms,77,
+85.51,Sports and recreation education ,all_dcms,85,
+30.12,Building of pleasure and sporting boats,all_dcms,30.1,
+62.011,Tourism,all_dcms,62,
