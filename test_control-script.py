@@ -2,12 +2,21 @@ import pandas as pd
 import numpy as np
 import itertools
 import pytest
+import platform
 
-current_year = 2016
+if platform.system() == 'Darwin':
+    shared_drive = '/Volumes/'
+elif platform.system() == 'Windows':
+    shared_drive = 'g drive path here'
+
+raw_data_dir = shared_drive + 'Data/EAU/Statistics/Economic Estimates/Employment - Helen/max-csv-data/'
+raw_data_dir = '~/data/'
+
+years = range(2011, 2016 + 1)
 
 raw_data = {}
-for year in range(2011, current_year + 1):
-    raw_data[year] = pd.read_csv("~/data/cleaned_" + str(year) + "_df.csv")
+for year in years:
+    raw_data[year] = pd.read_csv(raw_data_dir +  'raw_' + str(year) + "_df.csv")
     #print("~/data/cleaned_" + str(year) + "_df.csv")
 
 
@@ -188,166 +197,188 @@ def clean_data(year):
     agg['year'] = year
     return agg
 
+
+# ------------------------------------------------------------------------------
+# now we sum together the emp columns and melt the data so that emptype is a column
+
+def clean_data2(df):
+    
+    agg = df.copy()
+    
+    # fill in missing values to avoid problems with NaN
+    agg = agg.fillna(0)
+    
+    # sum main and second jobs counts together
+    agg['emp'] = agg['mainemp'] + agg['secondemp']
+    agg['selfemp'] = agg['mainselfemp'] + agg['secondselfemp']
+    agg.drop(['mainemp', 'secondemp', 'mainselfemp', 'secondselfemp'], axis=1, inplace=True)
+    
+    agg.head()
+    melted = pd.melt(agg, id_vars=['sector', 'sic', 'year'] + mycat, var_name='emptype', value_name='count')
+    melted.head()    
+    
+    # need to aggregate before we can add civil society to all_dcms?
+    
+    # reduce down to desired aggregate
+    aggfinal = melted.drop(['sic'], axis=1)
+    aggfinal = aggfinal.groupby(['sector', 'emptype', 'year'] + mycat).sum()
+    aggfinal = aggfinal.reset_index(['sector', 'emptype', 'year'] + mycat)
+    aggfinal.head()
+    
+    # add civil society to all_dcms and remove overlap from all_dcms
+    aggfinaloverlap = aggfinal.copy()
+    aggfinaloverlap = aggfinaloverlap.reset_index(drop=True)
+    aggfinaloverlap.head()
+    
+    alldcmsindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'all_dcms'].index
+    csindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'civil_society'].index
+    overlapindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'overlap'].index
+    newalldcms = aggfinaloverlap.loc[alldcmsindex, ['count']].reset_index(drop=True) + aggfinaloverlap.loc[csindex, ['count']].reset_index(drop=True) - aggfinaloverlap.loc[overlapindex, ['count']].reset_index(drop=True)
+    type(newalldcms)
+    newalldcms2 = newalldcms['count']
+    type(newalldcms2)
+    newalldcms3 = np.array(newalldcms2)
+    type(newalldcms3)
+    aggfinaloverlap.loc[alldcmsindex, ['count']] = newalldcms3
+    
+    aggfinal = aggfinaloverlap.copy()
+    
+    return aggfinal
+
+
+# need clean_data2() to include year to be able to reconcile figures
+
+
+# check figures match doing it this way then make clean_data2() more flexible to not strip out sic.
+table_levels = ['sex', 'region', 'sector']
 mycat = ['sex', 'region']
+mycat = ['sex']
+mycat = ['region']
 
-agg_2016 = clean_data(year = 2016)
-agg_2015 = clean_data(year = 2015)
-agg_2014 = clean_data(year = 2014)
-agg_2013 = clean_data(year = 2013)
-agg_2012 = clean_data(year = 2012)
-agg_2011 = clean_data(year = 2011)
+cleaned_data2 = [clean_data(i) for i in years]
+agg = pd.concat(cleaned_data2, ignore_index=True)
 
+aggfinal = clean_data2(agg)
+aggfinal2016 = aggfinal.loc[aggfinal.year == 2016]
+aggfinal2016 = aggfinal2016.drop(columns=['year'])
+aggfinal2016.head()
 
-cleaned_data2 = [clean_data(i) for i in range(2011, current_year + 1)]
-for check in cleaned_data2:
-    print(check.dtypes)
-final = pd.concat(cleaned_data2, ignore_index=True)
-
+# make tables
+def make_table(index, columns, sub_col, sub_value):
     
-    import aggregate_data_func
-    allyears[k] = aggregate_data_func.aggregate_data(allyears[k], {'mycat': 'region'})
     
-    mycol = allyears[k][allyears[k]['emptype'] == 'total']
-    mycol = mycol.groupby(['sector']).sum()
-    mycol = mycol.rename(columns={'count': k})
-    data.append(mycol)
-
-
-
-
-
-
-timeseries = pd.concat(data, axis=1)
-
-
-    dfcopy = df.copy()
-    if mycat == 'qualification':
-        dfcopy = dfcopy[dfcopy.qualification != 'dont know']
-        dfcopy = dfcopy[dfcopy.qualification != 'nan']
     
-    if time_series:
-        data = timeseries
-        
-        if current_year == 2016:
-            tourism = pd.DataFrame(columns=data.columns)
-            tourism.loc['tourism'] = [1, 2, 3, 4, 5, 6]
-    
-            percuk = pd.DataFrame(columns=data.columns)
-            percuk.loc['percuk'] = [1, 2, 3, 4, 5, 6]
-        
-        if current_year == 2017:
-            tourism = pd.DataFrame(columns=data.columns)
-            tourism.loc['tourism'] = [1, 2, 3, 4, 5, 6, 7]
-    
-            percuk = pd.DataFrame(columns=data.columns)
-            percuk.loc['percuk'] = [1, 2, 3, 4, 5, 6, 7]
+    # pd.crosstab() only accepts lists of series not subsetted dataframes
+    sindex = [aggfinal2016[col] for col in index]
+    scolumns = [aggfinal2016[col] for col in columns]
+    tb = pd.crosstab(index=sindex, columns=scolumns, values=aggfinal2016['count'], aggfunc='sum')
+    orderings = {
+        'sector': ["civil_society", "creative", "culture", "digital", "gambling", "sport", "telecoms", "all_dcms", "total_uk"],
+        'sex': ['Male', 'Female'],
+    }
 
-        # add tourism
-        data = data.append(tourism)
-        data = data.append(percuk)
-        
-        # rounding
-        data = round(data / 1000, 0).astype(int)
-        
-        
-        # reorder rows
-        myroworder = ["civil_society", "creative", "culture", "digital", "gambling", "sport", "telecoms", 'tourism', "all_dcms", 'percuk', "total_uk"]
-        data = data.reindex(myroworder)
-        
-        
-        # CHECK DATA MATCHES PUBLICATION
-        # store anonymised values as 0s for comparison and data types
-        import check_data_func
-        from openpyxl import load_workbook, Workbook
-        from openpyxl.utils.dataframe import dataframe_to_rows
-#        exceldataframe = check_data_func.check_data(data, wsname, startrow, startcol, finishrow, finishcol)
-#        # compare computed and publication data
-#        
-#        difference = data - exceldataframe
-#        
-#        if sum((difference > 1).any()) != 0:
-#            print(table + ': datasets dont match')
-            
-    # MAIN GROUP OF FUNCTIONS
-    else:        
-        cat = mycat
-        # CLEANING DATA - adding up main and second jobs, calculating some totals, columns for sector, cat, region, count
-        # there doesn't appear to be any tables which use both region and a demographic category, so simply remove region or replace cat column with it.
-        sic_level = False
-        
-        import clean_data_func
-        agg = clean_data_func.clean_data(dfcopy, table_params, sic_mappings, regionlookupdata, weightedcountcol)
-        agg = agg[['sector', mycat, 'sic', 'mainemp', 'secondemp', 'mainselfemp', 'secondselfemp']]
-        
-        spsslist = """
-        1820, 2611, 2612, 2620, 2630, 2640, 2680, 3012, 3212, 3220, 3230, 4651, 4652, 4763, 4764, 4910, 4932, 4939, 5010, 5030, 5110, 5510, 5520, 5530, 5590, 5610, 5621, 5629, 5630, 5811, 5812, 5813, 5814, 
-        5819, 5821, 5829, 5911, 5912, 5913, 5914, 5920, 6010, 6020, 6110, 6120, 6130, 6190, 6201, 6202, 6203, 6209, 6311, 6312, 6391, 6399, 6820, 7021, 7111, 7311, 7312, 7410, 7420, 7430, 7711, 7721, 
-        7722, 7729, 7734, 7735, 7740, 7911, 7912, 7990, 8230, 8551, 8552, 9001, 9002, 9003, 9004, 9101, 9102, 9103, 9104, 9200, 9311, 9312, 9313, 9319, 9321, 9329, 9511, 9512 """
-        spsslist = spsslist.replace('\n', '')
-        spsslist = spsslist.replace('\t', '')
-        spsslist = spsslist.replace(' ', '')
-        mylist = np.array(spsslist.split(","))
-        
-        import aggregate_data_func
-        aggfinal = aggregate_data_func.aggregate_data(agg, table_params)
-            
-        if emptypecats == False:
-            aggfinal = aggfinal[aggfinal['emptype'] == 'total']
-                            
-        # SUMMARISING DATA
-        if cat == 'region':
-            import region_summary_table_func
-            final = region_summary_table_func.region_summary_table(aggfinal, table_params)
+    for i in [i for i in index if i in orderings]:
+        if isinstance(tb.index, pd.core.index.MultiIndex):
+            tb = tb.reindex(orderings[i], axis=0, level=i)
         else:
-            import summary_table_func
-            final = summary_table_func.summary_table(aggfinal, cat, perc, cattotal, catorder) 
+            tb = tb.reindex(orderings[i], axis=0)
+
+    for i in [i for i in columns if i in orderings]:
+        if isinstance(tb.columns, pd.core.index.MultiIndex):
+            tb = tb.reindex(orderings[i], axis=1, level=i)
+        else:
+            tb = tb.reindex(orderings[i], axis=1)
+    tb = round(tb / 1000, 0)
+    return tb
+
+
+tb = make_table(['sector'], ['emptype', 'sex'], 'year', 2016)
+tb = make_table(['sector'], ['emptype'], 'year', 2016)
+tb = make_table(['sex', 'sector'], ['emptype'], 'year', 2016)
+
+tb
+my = {'hi': 6, 'hello':7}
+ml = ['yo', 'hi']
+[i for i in ml if i in my]
+
+# read in data directly from 2016 excel publication downloaded from gov.uk
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+import string
+
+def read_xl_pub(wsname, startrow, finishrow, cols):
+    ws = wb[wsname]
+    col_nos = [string.ascii_lowercase.index(myletter.lower()) for myletter in cols]
+    
+    exceldata = ws.values
+    exceldata = list(exceldata)
+    newdata = []
+    
+    # copy data into list
+    for row in range(startrow - 1, finishrow):
+        listrow = [exceldata[row][i] for i in col_nos]
+    
+        # code anonymised as 0s
+        listrow = [0 if x == '-' else x for x in listrow]
+        
+        # code NA as 999999s
+        listrow = [999999 if x == 'N/A' else x for x in listrow]
+        
+        listrow = [-999999 if pd.isnull(x) else x for x in listrow]
+    
+        newdata.append(listrow)
+    
+    exceldataframe = pd.DataFrame(newdata)
+    return exceldataframe
+
+wb = load_workbook('DCMS_Sectors_Economic_Estimates_Employment_2016_tables.xlsx')
+xl_gender = read_xl_pub(
+        wsname = "3.5 - Gender (000's)",
+        startrow = 9,
+        finishrow = 17,
+        cols = ['l', 'n'])
+
+
+(tb.values == xl_gender.values).all()
+
+
+
+
+
+if mycat == 'qualification':
+    dfcopy = dfcopy[dfcopy.qualification != 'dont know']
+    dfcopy = dfcopy[dfcopy.qualification != 'nan']
+    
+# add tourism
+data = data.append(tourism)
+        
+# rounding
+data = round(data / 1000, 0).astype(int)
+        
+        
+# reorder rows
+myroworder = ["civil_society", "creative", "culture", "digital", "gambling", "sport", "telecoms", 'tourism', "all_dcms", 'percuk', "total_uk"]
+data = data.reindex(myroworder)
+        
+spsslist = """
+1820, 2611, 2612, 2620, 2630, 2640, 2680, 3012, 3212, 3220, 3230, 4651, 4652, 4763, 4764, 4910, 4932, 4939, 5010, 5030, 5110, 5510, 5520, 5530, 5590, 5610, 5621, 5629, 5630, 5811, 5812, 5813, 5814, 
+5819, 5821, 5829, 5911, 5912, 5913, 5914, 5920, 6010, 6020, 6110, 6120, 6130, 6190, 6201, 6202, 6203, 6209, 6311, 6312, 6391, 6399, 6820, 7021, 7111, 7311, 7312, 7410, 7420, 7430, 7711, 7721, 
+7722, 7729, 7734, 7735, 7740, 7911, 7912, 7990, 8230, 8551, 8552, 9001, 9002, 9003, 9004, 9101, 9102, 9103, 9104, 9200, 9311, 9312, 9313, 9319, 9321, 9329, 9511, 9512 """
+spsslist = spsslist.replace('\n', '')
+spsslist = spsslist.replace('\t', '')
+spsslist = spsslist.replace(' ', '')
+spsslist = np.array(spsslist.split(","))
+                                    
+mask = emptable.loc[:, (slice(None), colsforrounding)] < 6000
+emptable[mask] = 0
+emptable.loc[:, (slice(None), colsforrounding)] = round(emptable.loc[:, (slice(None), colsforrounding)] / 1000, 0).astype(int)
+final = final.fillna(0)
+myroworder = ['North East', 'North West', 'Yorkshire and the Humber', 'East Midlands', 'West Midlands', 'East of England', 'London', 'South East', 'South West', 'Wales', 'Scotland', 'Northern Ireland', 'All regions']
         
         # ANONYMISING DATA
         import anonymise_func
         data = anonymise_func.anonymise(final, emptypecats, anoncats, cat, sector)
         
-        # add extra anonymisation to match publication
-        if cat == 'sex':
-            data.loc['telecoms', ('employed', 'Total')] = 0
-            data.loc['telecoms', ('self employed', 'Total')] = 0
-    
-        if table == 'cs':
-            data.loc['Northern Ireland', 'total'] = 0
-            data.loc['Northern Ireland', 'perc_of_all_regions'] = 0
-        
-        # CHECK DATA MATCHES PUBLICATION
-        # store anonymised values as 0s for comparison and data types
-        import check_data_func
-        from openpyxl import load_workbook, Workbook
-        from openpyxl.utils.dataframe import dataframe_to_rows
-        exceldataframe = check_data_func.check_data(data, wsname, startrow, startcol, finishrow, finishcol)
-        # compare computed and publication data
-        
-        difference = data - exceldataframe
-        
-        if sum((difference > 1).any()) != 0:
-            print(cat + ': datasets dont match')
-        
-        #mylist = make_cat_data()
-        #data = mylist[1]
-        #difference = mylist[0]
-
-    differencelist.update({table : difference})
-    
-    ws = wb[wsname]
-    rows = dataframe_to_rows(data, index=False, header=False)
-    
-    for r_idx, row in enumerate(rows, 1):
-        for c_idx, value in enumerate(row, 1):
-             ws.cell(row=r_idx + startrow - 1, column=c_idx + 1, value=value)
- 
-  
-"""
-wsname = "3.5 - Gender (000's)"
-startrow = 9
-finishrow = 17
-finishcol = 16
-"""
 
 # marks=pytest.mark.xfail
 import pytest
@@ -372,57 +403,4 @@ def test_datamatches(test_input, expected):
     assert sum((differencelist[test_input] > 0.05).any()) == expected
 
 
-wb.save('employment_pub_2017_python_unfinished.xlsx')
-
-# get final table with hierarchical indexes which I can check against those read in from excel (including order of rows etc), but then just output the values to the formatted excel templates
-
-# for anonymisation, it seems something quite simple will work initially. Only gender, age, and nnsec seem like they will require rules
-
 # for region the total won't = the sum anyway, so don't need to do annonymisation
-
-# use openpyxl initially and move on to xlwings if necessary. xlsxwriter cannot read workbooks but should be considered if producing workbooks from scratch.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
