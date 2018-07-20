@@ -7,6 +7,12 @@ import numpy as np
 import itertools
 import pytest
 import platform
+import pickle
+
+
+
+
+# this section creates the aggregated and anonymised data used for analysis. If you don't have access to the raw data, you can move straight on to the analysis section which uses saved aggregated data (CURRENTLY DUMMY DATA).
 
 if platform.system() == 'Darwin':
     shared_drive = '/Volumes/'
@@ -18,22 +24,15 @@ raw_data_dir = '~/data/'
 
 years = range(2011, 2016 + 1)
 
-raw_data = {}
-for year in years:
-    raw_data[year] = pd.read_csv(raw_data_dir +  'raw_' + str(year) + "_df.csv")
-    #print("~/data/cleaned_" + str(year) + "_df.csv")
-
-
-# df2016 = pd.read_csv("~/data/cleaned_2016_df.csv")
-#df2016 = allyears[current_year]
+#raw_data = {y:pd.read_csv(raw_data_dir +  'raw_' + str(y) + "_df.csv") for y in years}
+#
+#pickle.dump(raw_data, open("raw_data.p", "wb"))
+raw_data = pickle.load(open("raw_data.p", "rb"))
 
 # finish cleaning data post R cleaning =========================================
 
 regionlookupdata = pd.read_csv('region-lookup.csv')
-regionlookdict = {}
-for index, row in regionlookupdata.iterrows():
-    regionlookdict.update({row[0] : row[1]})
-
+regionlookdict = {row[0]: row[1] for index, row in regionlookupdata.iterrows()}
 
 def clean_raw_data(df):
         
@@ -92,8 +91,12 @@ def clean_data(year):
 
     df = cleaned_data[year]
     
+#    df['qualification'] = df['qualification'].astype(str)
+    df['ftpt'] = df['ftpt'].astype(str)
+    df['nssec'] = df['nssec'].astype(str)
+    
     catuniques = []
-    for caty in mycat:
+    for caty in demographics + ['region']:
         if caty == 'region':
             catuniques.append(np.unique(regionlookupdata.mapno))
         else:
@@ -105,7 +108,7 @@ def clean_data(year):
     
     aggdict = {}
     aggdict['sector'] = x
-    for caty in mycat:
+    for caty in demographics + ['region']:
         if caty == 'region':
             aggdict[caty] = np.unique(regionlookupdata.mapno)
         else:
@@ -142,7 +145,7 @@ def clean_data(year):
         # create subset for each of 4 groups
         df['region'] = df[regioncol]
         df['region'] = df['region'].fillna('missing region')
-        dftemp = df[[sicvar, emptype, weightedcountcol, 'cs_flag'] + mycat].copy()
+        dftemp = df[[sicvar, emptype, weightedcountcol, 'cs_flag'] + demographics + ['region']].copy()
         dftemp = dftemp.loc[dftemp[emptype] == emptypeflag]
         # need separate sic column to allow merging - I think
         dftemp.rename(columns={sicvar : 'sic'}, inplace=True)
@@ -192,7 +195,7 @@ def clean_data(year):
         dftemp['sic'] = dftemp['sic'].fillna(value=-1)
         dftemp.head()
         # create column with unique name (which is why pd.DataFrame() syntax is used) which sums the count by sector
-        aggtemp = pd.DataFrame({subset : dftemp.groupby( ['sector', 'sic'] + mycat)[weightedcountcol].sum()}).reset_index()
+        aggtemp = pd.DataFrame({subset : dftemp.groupby( ['sector', 'sic'] + demographics + ['region'])[weightedcountcol].sum()}).reset_index()
         
         # merge final stacked subset into empty dataset containing each sector and category level combo
         # should be able to just use aggtemp for first agg where subset=='mainemp', but gave error, need to have play around. checking that agg has all the correct sectors and cat levels should be a separate piece of code.
@@ -217,9 +220,8 @@ def clean_data2(df):
     agg['selfemp'] = agg['mainselfemp'] + agg['secondselfemp']
     agg.drop(['mainemp', 'secondemp', 'mainselfemp', 'secondselfemp'], axis=1, inplace=True)
     
-    agg.head()
-    melted = pd.melt(agg, id_vars=['sector', 'sic', 'year'] + mycat, var_name='emptype', value_name='count')
-    melted.head()    
+    agg = agg[['sector', 'sic', 'year', 'emp', 'selfemp'] + mycat]
+    melted = pd.melt(agg, id_vars=['sector', 'sic', 'year'] + mycat, var_name='emptype', value_name='count')  
     
     # need to aggregate before we can add civil society to all_dcms?
     
@@ -227,45 +229,96 @@ def clean_data2(df):
     aggfinal = melted.drop(['sic'], axis=1)
     aggfinal = aggfinal.groupby(['sector', 'emptype', 'year'] + mycat).sum()
     aggfinal = aggfinal.reset_index(['sector', 'emptype', 'year'] + mycat)
-    aggfinal.head()
     
     # add civil society to all_dcms and remove overlap from all_dcms
     aggfinaloverlap = aggfinal.copy()
-    aggfinaloverlap = aggfinaloverlap.reset_index(drop=True)
-    aggfinaloverlap.head()
+#    aggfinaloverlap = aggfinaloverlap.reset_index(drop=True)
     
     alldcmsindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'all_dcms'].index
     csindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'civil_society'].index
     overlapindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'overlap'].index
     newalldcms = aggfinaloverlap.loc[alldcmsindex, ['count']].reset_index(drop=True) + aggfinaloverlap.loc[csindex, ['count']].reset_index(drop=True) - aggfinaloverlap.loc[overlapindex, ['count']].reset_index(drop=True)
-    type(newalldcms)
     newalldcms2 = newalldcms['count']
-    type(newalldcms2)
     newalldcms3 = np.array(newalldcms2)
-    type(newalldcms3)
     aggfinaloverlap.loc[alldcmsindex, ['count']] = newalldcms3
     
-    aggfinal = aggfinaloverlap.copy()
-    
-    return aggfinal
+    return aggfinaloverlap
 
 
 # need clean_data2() to include year to be able to reconcile figures
 
-
 # check figures match doing it this way then make clean_data2() more flexible to not strip out sic.
-table_levels = ['sex', 'region', 'sector']
-mycat = ['sex', 'region']
-mycat = ['sex']
-mycat = ['region']
-demographics = ['sex', 'ethnicity', 'dcms_ageband', 'qualification', 'ftpt', 'nssec']
+
+
+# qualification is only in 2016 and 2017 so exclude
+demographics = ['sex', 'ethnicity', 'dcms_ageband', 'ftpt', 'nssec']
 other_vars = ['sector', ]
 
-cleaned_data2 = [clean_data(i) for i in years]
-agg = pd.concat(cleaned_data2, ignore_index=True)
-agg.columns
+#cleaned_data2 = [clean_data(i) for i in years]
+#agg = pd.concat(cleaned_data2, ignore_index=True)
 
+#pickle.dump(agg, open("agg.p", "wb"))
+agg = pickle.load(open("agg.p", "rb"))
+
+mycat = demographics + ['region']
 aggfinal = clean_data2(agg)
+
+
+
+
+
+
+#check = aggfinal.loc[(aggfinal.year == 2016)]
+#check2 = check.drop(['year'], axis = 1)
+#check3 = check2.groupby(['sector', 'region', 'sex']).sum().reset_index()
+#check3.loc[check3.sector == 'overlap']
+#
+#check3.groupby(['sector']).size()
+#
+## fill in missing values to avoid problems with NaN
+#agg = agg.fillna(0)
+#
+## sum main and second jobs counts together
+#agg['emp'] = agg['mainemp'] + agg['secondemp']
+#agg['selfemp'] = agg['mainselfemp'] + agg['secondselfemp']
+#agg.drop(['mainemp', 'secondemp', 'mainselfemp', 'secondselfemp'], axis=1, inplace=True)
+#
+#agg = agg[['sector', 'sic', 'year', 'emp', 'selfemp'] + mycat]
+#melted = pd.melt(agg, id_vars=['sector', 'sic', 'year'] + mycat, var_name='emptype', value_name='count')  
+#
+## need to aggregate before we can add civil society to all_dcms?
+#
+## reduce down to desired aggregate
+#aggfinal = melted.drop(['sic'], axis=1)
+#aggfinal = aggfinal.groupby(['sector', 'emptype', 'year'] + demographics + ['region']).sum()
+#aggfinal = aggfinal.reset_index(['sector', 'emptype', 'year'] + demographics + ['region'])
+#
+#
+#
+#
+#
+## add civil society to all_dcms and remove overlap from all_dcms
+#aggfinaloverlap = aggfinal.copy()
+##    aggfinaloverlap = aggfinaloverlap.reset_index(drop=True)
+#
+#alldcmsindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'all_dcms'].index
+#csindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'civil_society'].index
+#overlapindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'overlap'].index
+#newalldcms = aggfinaloverlap.loc[alldcmsindex, ['count']].reset_index(drop=True) + aggfinaloverlap.loc[csindex, ['count']].reset_index(drop=True) - aggfinaloverlap.loc[overlapindex, ['count']].reset_index(drop=True)
+#
+#newalldcms2 = newalldcms['count']
+#newalldcms3 = np.array(newalldcms2)
+#len(newalldcms3)
+#aggfinaloverlap.loc[alldcmsindex, ['count']] = newalldcms3
+
+
+
+
+
+
+
+
+
 
 
 # make tables
@@ -274,8 +327,11 @@ aggfinal = clean_data2(agg)
 
 def make_table(index, columns, sub_col, sub_value):
     
-    #subset data
+    # user specified subset data
     agg_temp = aggfinal.loc[aggfinal[sub_col] == sub_value]
+    # for non sector breakdowns, subset data to only inlcude 'all_dcms' sector
+    if 'sector' not in index and 'sector' not in columns:
+        agg_temp = agg_temp.loc[agg_temp.sector == 'all_dcms']
     
     
     # pd.crosstab() only accepts lists of series not subsetted dataframes
@@ -289,7 +345,7 @@ def make_table(index, columns, sub_col, sub_value):
     orderings = {
         'sector': ["civil_society", "creative", "culture", "digital", "gambling", "sport", "telecoms", "all_dcms", "total_uk"],
         'sex': ['Male', 'Female'],
-        'region': ['North East', 'North West', 'Yorkshire and the Humber', 'East Midlands', 'West Midlands', 'East of England', 'London', 'South East', 'South West', 'Wales', 'Scotland', 'Northern Ireland', 'All regions'],
+        'region': ['North East', 'North West', 'Yorkshire and the Humber', 'East Midlands', 'West Midlands', 'East of England', 'London', 'South East', 'South West', 'Wales', 'Scotland', 'Northern Ireland'],
     }
     for i in [i for i in index if i in orderings]:
         if isinstance(tb.index, pd.core.index.MultiIndex):
@@ -304,7 +360,7 @@ def make_table(index, columns, sub_col, sub_value):
             tb = tb.reindex(orderings[i], axis=1)
     
     # anonymise
-    tb[tb < 6000] = 0
+    #tb[tb < 6000] = 0
     
     # round and convert to 000's
     tb = round(tb / 1000, 0).astype(int)
@@ -312,9 +368,9 @@ def make_table(index, columns, sub_col, sub_value):
     return tb
 
 
-tb = make_table(['sector'], ['emptype', 'sex'], 'year', 2016)
-tb = make_table(['sector'], ['emptype'], 'year', 2016)
-tb = make_table(['region', 'sector'], ['emptype'], 'year', 2016)
+#tb = make_table(['sector'], ['emptype', 'sex'], 'year', 2016)
+#tb = make_table(['sector'], ['emptype'], 'year', 2016)
+#tb = make_table(['region', 'sector'], ['emptype'], 'year', 2016)
 
 
 # read in data directly from 2016 excel publication downloaded from gov.uk
@@ -347,59 +403,31 @@ def read_xl_pub(wsname, startrow, finishrow, cols):
     exceldataframe = pd.DataFrame(newdata)
     return exceldataframe
 
-wb = load_workbook('DCMS_Sectors_Economic_Estimates_Employment_2016_tables.xlsx')
-xl_gender = read_xl_pub(
-        wsname = "3.5 - Gender (000's)",
-        startrow = 9,
-        finishrow = 17,
-        cols = ['l', 'n'])
 
-
-(tb.values == xl_gender.values).all()
-
-
-
-
-
-if mycat == 'qualification':
-    dfcopy = dfcopy[dfcopy.qualification != 'dont know']
-    dfcopy = dfcopy[dfcopy.qualification != 'nan']
-    
 # add tourism
 #data = data.append(tourism)
-        
-# rounding
-data = round(data / 1000, 0).astype(int)
-        
-                                            
-mask = emptable.loc[:, (slice(None), colsforrounding)] < 6000
-emptable[mask] = 0
-emptable.loc[:, (slice(None), colsforrounding)] = round(emptable.loc[:, (slice(None), colsforrounding)] / 1000, 0).astype(int)
-final = final.fillna(0)
-        
-        
+
+
+# testing
+# https://www.gov.uk/government/statistics/dcms-sectors-economic-estimates-2017-employment-and-trade
+# https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/636391/DCMS_Sectors_Economic_Estimates_Employment_2016_tables.xlsx
+wb = load_workbook('DCMS_Sectors_Economic_Estimates_Employment_2016_tables.xlsx')
+py_tbs = dict(
+    sex = make_table(['sector'], ['sex'], 'year', 2016)[0:7],
+    region = make_table(['region'], ['emptype'], 'year', 2016),
+)
+xl_tbs = dict(
+    sex = read_xl_pub(wsname = "3.5 - Gender (000's)", startrow = 9, finishrow = 15, cols = ['l', 'n']),
+    region = read_xl_pub(wsname = "3.3 - Region (000's)", startrow = 8, finishrow = 19, cols = ['b', 'd']),
+)
+
 
 # marks=pytest.mark.xfail
-import pytest
 @pytest.mark.parametrize('test_input,expected', [
-    pytest.param('sex', 0, marks=pytest.mark.basic),
-    pytest.param('ethnicity', 0, marks=pytest.mark.basic),
-    pytest.param('dcms_ageband', 0, marks=pytest.mark.basic),
-    pytest.param('qualification', 0, marks=pytest.mark.basic), # publication numbers dont add up - go through with penny - turn's out there is an extra column which is hidden by the publication called don't know which explains all this
-    pytest.param('ftpt', 0, marks=pytest.mark.basic),
-    pytest.param('nssec', 0, marks=pytest.mark.basic),
-    pytest.param('region', 0, marks=pytest.mark.basic),
-    pytest.param('cs', 0, marks=pytest.mark.basic),
-    pytest.param('ci', 0, marks=pytest.mark.basic),
-    pytest.param('culture', 0, marks=pytest.mark.basic),
-    pytest.param('digital', 0, marks=pytest.mark.basic),
-    pytest.param('gambling', 0, marks=pytest.mark.basic),
-    pytest.param('sport', 0, marks=pytest.mark.basic),
-    pytest.param('telecoms', 0, marks=pytest.mark.basic),
+    pytest.param('sex', True, marks=pytest.mark.basic),
 ])
 def test_datamatches(test_input, expected):
-    assert sum((differencelist[test_input] < -0.05).any()) == expected
-    assert sum((differencelist[test_input] > 0.05).any()) == expected
+    assert (py_tbs[test_input].values == xl_tbs[test_input].values).all() == expected
 
 
 # for region the total won't = the sum anyway, so don't need to do annonymisation
