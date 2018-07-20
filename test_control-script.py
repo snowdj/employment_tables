@@ -1,3 +1,7 @@
+# to put into perspective how much more efficient it is to use Python, and functions in your code, the previous process to produce these tables used 15 SPSS scripts and 3 excel files with a total of 50 sheets. This makes the process considerably more: transparent, less prone to errors. It also allows products such as the interactive tool to be built which would have not previously been possible.
+
+# as it stands, I have removed SIC as a breakdown option, to simplify anonymising the data
+
 import pandas as pd
 import numpy as np
 import itertools
@@ -254,29 +258,39 @@ table_levels = ['sex', 'region', 'sector']
 mycat = ['sex', 'region']
 mycat = ['sex']
 mycat = ['region']
+demographics = ['sex', 'ethnicity', 'dcms_ageband', 'qualification', 'ftpt', 'nssec']
+other_vars = ['sector', ]
 
 cleaned_data2 = [clean_data(i) for i in years]
 agg = pd.concat(cleaned_data2, ignore_index=True)
+agg.columns
 
 aggfinal = clean_data2(agg)
-aggfinal2016 = aggfinal.loc[aggfinal.year == 2016]
-aggfinal2016 = aggfinal2016.drop(columns=['year'])
-aggfinal2016.head()
+
 
 # make tables
+
+# anonymisation - to reduce the amount of anonymisation needed, the data has been structured to not allow comparison of multiple demographics - this is conistent with the current excel publication.
+
 def make_table(index, columns, sub_col, sub_value):
     
+    #subset data
+    agg_temp = aggfinal.loc[aggfinal[sub_col] == sub_value]
     
     
     # pd.crosstab() only accepts lists of series not subsetted dataframes
-    sindex = [aggfinal2016[col] for col in index]
-    scolumns = [aggfinal2016[col] for col in columns]
-    tb = pd.crosstab(index=sindex, columns=scolumns, values=aggfinal2016['count'], aggfunc='sum')
+    sindex = [agg_temp[col] for col in index]
+    scolumns = [agg_temp[col] for col in columns]
+    
+    # create table
+    tb = pd.crosstab(index=sindex, columns=scolumns, values=agg_temp['count'], aggfunc='sum')
+    
+    # reorder columns and index
     orderings = {
         'sector': ["civil_society", "creative", "culture", "digital", "gambling", "sport", "telecoms", "all_dcms", "total_uk"],
         'sex': ['Male', 'Female'],
+        'region': ['North East', 'North West', 'Yorkshire and the Humber', 'East Midlands', 'West Midlands', 'East of England', 'London', 'South East', 'South West', 'Wales', 'Scotland', 'Northern Ireland', 'All regions'],
     }
-
     for i in [i for i in index if i in orderings]:
         if isinstance(tb.index, pd.core.index.MultiIndex):
             tb = tb.reindex(orderings[i], axis=0, level=i)
@@ -288,18 +302,20 @@ def make_table(index, columns, sub_col, sub_value):
             tb = tb.reindex(orderings[i], axis=1, level=i)
         else:
             tb = tb.reindex(orderings[i], axis=1)
-    tb = round(tb / 1000, 0)
+    
+    # anonymise
+    tb[tb < 6000] = 0
+    
+    # round and convert to 000's
+    tb = round(tb / 1000, 0).astype(int)
+    
     return tb
 
 
 tb = make_table(['sector'], ['emptype', 'sex'], 'year', 2016)
 tb = make_table(['sector'], ['emptype'], 'year', 2016)
-tb = make_table(['sex', 'sector'], ['emptype'], 'year', 2016)
+tb = make_table(['region', 'sector'], ['emptype'], 'year', 2016)
 
-tb
-my = {'hi': 6, 'hello':7}
-ml = ['yo', 'hi']
-[i for i in ml if i in my]
 
 # read in data directly from 2016 excel publication downloaded from gov.uk
 from openpyxl import load_workbook, Workbook
@@ -350,34 +366,17 @@ if mycat == 'qualification':
     dfcopy = dfcopy[dfcopy.qualification != 'nan']
     
 # add tourism
-data = data.append(tourism)
+#data = data.append(tourism)
         
 # rounding
 data = round(data / 1000, 0).astype(int)
         
-        
-# reorder rows
-myroworder = ["civil_society", "creative", "culture", "digital", "gambling", "sport", "telecoms", 'tourism', "all_dcms", 'percuk', "total_uk"]
-data = data.reindex(myroworder)
-        
-spsslist = """
-1820, 2611, 2612, 2620, 2630, 2640, 2680, 3012, 3212, 3220, 3230, 4651, 4652, 4763, 4764, 4910, 4932, 4939, 5010, 5030, 5110, 5510, 5520, 5530, 5590, 5610, 5621, 5629, 5630, 5811, 5812, 5813, 5814, 
-5819, 5821, 5829, 5911, 5912, 5913, 5914, 5920, 6010, 6020, 6110, 6120, 6130, 6190, 6201, 6202, 6203, 6209, 6311, 6312, 6391, 6399, 6820, 7021, 7111, 7311, 7312, 7410, 7420, 7430, 7711, 7721, 
-7722, 7729, 7734, 7735, 7740, 7911, 7912, 7990, 8230, 8551, 8552, 9001, 9002, 9003, 9004, 9101, 9102, 9103, 9104, 9200, 9311, 9312, 9313, 9319, 9321, 9329, 9511, 9512 """
-spsslist = spsslist.replace('\n', '')
-spsslist = spsslist.replace('\t', '')
-spsslist = spsslist.replace(' ', '')
-spsslist = np.array(spsslist.split(","))
-                                    
+                                            
 mask = emptable.loc[:, (slice(None), colsforrounding)] < 6000
 emptable[mask] = 0
 emptable.loc[:, (slice(None), colsforrounding)] = round(emptable.loc[:, (slice(None), colsforrounding)] / 1000, 0).astype(int)
 final = final.fillna(0)
-myroworder = ['North East', 'North West', 'Yorkshire and the Humber', 'East Midlands', 'West Midlands', 'East of England', 'London', 'South East', 'South West', 'Wales', 'Scotland', 'Northern Ireland', 'All regions']
         
-        # ANONYMISING DATA
-        import anonymise_func
-        data = anonymise_func.anonymise(final, emptypecats, anoncats, cat, sector)
         
 
 # marks=pytest.mark.xfail
