@@ -277,17 +277,35 @@ aggfinal.columns
 
 # anonymisation - to reduce the amount of anonymisation needed, the data has been structured to not allow comparison of multiple demographics - this is conistent with the current excel publication.
 
-def make_table(index, columns, sub_col=None, sub_value=None):
+def make_table(index, columns, sub_col=None, sub_value=None, raw=False):
     
-    
-    # user specified subset data
-    if sub_col:
-        mydf = pd.read_csv('agg_csvs/' + '_'.join(sorted(index + columns + [sub_col])) + '.csv')
-        agg_temp = mydf.loc[mydf[sub_col] == sub_value]
+    # create flag for whether data needs to be subsetted to all_dcms
+    if 'sector' not in index and 'sector' not in columns and 'sector' not in [sub_col]:
+        all_dcms = True
     else:
-        agg_temp = pd.read_csv('agg_csvs/' + '_'.join(sorted(index + columns)) + '.csv')
+        all_dcms = False
+        
+    if raw:
+        agg_temp = aggfinal
+        
+    else:
+        # user specified subset data
+        if sub_col:
+            all_cols = index + columns + [sub_col]
+        else:
+            all_cols = index + columns
+        if all_dcms:
+            all_cols = all_cols + ['sector']
+            
+        agg_temp = pd.read_csv('agg_csvs/' + '_'.join(sorted(all_cols)) + '.csv')
+
+    
+    # subset data if subset arguments provided
+    if sub_col:
+            agg_temp = agg_temp.loc[agg_temp[sub_col] == sub_value]
+        
     # for non sector breakdowns, subset data to only inlcude 'all_dcms' sector
-    if 'sector' not in index and 'sector' not in columns:
+    if all_dcms:
         agg_temp = agg_temp.loc[agg_temp.sector == 'all_dcms']
     
 #    idemo = [d for d in index if d in demographics]
@@ -340,7 +358,7 @@ def make_table(index, columns, sub_col=None, sub_value=None):
     return tb
 
 
-
+make_table(['region'], ['emptype'], 'year', 2017)
 
 
 #demographics
@@ -373,6 +391,7 @@ def reduce_and_save_data(combo):
 aggfinal.columns
 make_table(['sector', 'ethnicity'], ['year'])
 make_table(['sector', 'ethnicity'], ['emptype', 'sex'], 'year', 2017)
+make_table(['sector', 'ethnicity'], ['emptype', 'sex'], 'year', 2017, True)
 
 
 #demo = [d for d in ['emptype', 'sex'] if d in demographics]
