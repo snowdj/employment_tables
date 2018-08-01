@@ -22,7 +22,7 @@ elif platform.system() == 'Windows':
 raw_data_dir = shared_drive + 'Data/EAU/Statistics/Economic Estimates/Employment - Helen/max-csv-data/'
 raw_data_dir = '~/data/'
 
-years = range(2011, 2016 + 1)
+years = range(2011, 2017 + 1)
 
 #raw_data = {y:pd.read_csv(raw_data_dir +  'raw_' + str(y) + "_df.csv") for y in years}
 #
@@ -33,20 +33,6 @@ raw_data = pickle.load(open("raw_data.p", "rb"))
 
 regionlookupdata = pd.read_csv('region-lookup.csv')
 regionlookdict = {row[0]: row[1] for index, row in regionlookupdata.iterrows()}
-
-def clean_raw_data(df):
-        
-    df['regionmain'] = df.GORWKR.map(regionlookdict)
-    df['regionsecond'] = df.GORWK2R.map(regionlookdict)
-    
-    return df
-
-cleaned_data = {k: clean_raw_data(v) for k, v in raw_data.items()}
-
-#df = allyears[current_year]    
-#df['qualification'] = df['qualification'].astype(str)
-#df['ftpt'] = df['ftpt'].astype(str)
-#df['nssec'] = df['nssec'].astype(str)
 
 sic_mappings = pd.read_csv("sic_mappings.csv")
 sic_mappings = sic_mappings[sic_mappings.sic != 62.011]
@@ -89,8 +75,10 @@ def clean_data(year):
     if year == 2017:
         weightedcountcol = 'PWTA17'
 
-    df = cleaned_data[year]
+    df = raw_data[year]
     
+    df['regionmain'] = df.GORWKR.map(regionlookdict)
+    df['regionsecond'] = df.GORWK2R.map(regionlookdict)
 #    df['qualification'] = df['qualification'].astype(str)
     df['ftpt'] = df['ftpt'].astype(str)
     df['nssec'] = df['nssec'].astype(str)
@@ -181,10 +169,8 @@ def clean_data(year):
         dftemp_totaluk = dftemp_totaluk[dftemp_sectors.columns.values]
         
         # append different subsets together
-        dftemp = dftemp_totaluk.append(dftemp_sectors)
-        dftemp = dftemp.append(dftemp_cs)
-        dftemp = dftemp.append(dftemp_all_dcms)
-        dftemp = dftemp.append(dftemp_all_dcms_overlap)
+        dftemp = dftemp_totaluk.append(dftemp_sectors).append(dftemp_cs).append(dftemp_all_dcms).append(dftemp_all_dcms_overlap)
+#        dftemp = pd.concat(['dftemp_totaluk', 'dftemp_sectors', 'dftemp_cs', 'dftemp_all_dcms', 'dftemp_all_dcms_overlap'])
         
         # groupby ignores NaN so giving region NaNs a value
         
@@ -210,25 +196,24 @@ def clean_data(year):
 
 def clean_data2(df):
     
-    agg = df.copy()
-    
     # fill in missing values to avoid problems with NaN
-    agg = agg.fillna(0)
+    agg = df.fillna(0)
     
     # sum main and second jobs counts together
     agg['emp'] = agg['mainemp'] + agg['secondemp']
     agg['selfemp'] = agg['mainselfemp'] + agg['secondselfemp']
     agg.drop(['mainemp', 'secondemp', 'mainselfemp', 'secondselfemp'], axis=1, inplace=True)
     
-    agg = agg[['sector', 'sic', 'year', 'emp', 'selfemp'] + mycat]
-    melted = pd.melt(agg, id_vars=['sector', 'sic', 'year'] + mycat, var_name='emptype', value_name='count')  
+    # melt 'emp' and 'selfemp' into 'emptype'
+    agg = agg[['sector', 'sic', 'year', 'emp', 'selfemp', 'region'] + demographics]
+    melted = pd.melt(agg, id_vars=['sector', 'sic', 'year', 'region'] + demographics, var_name='emptype', value_name='count')  
     
     # need to aggregate before we can add civil society to all_dcms?
     
     # reduce down to desired aggregate
     aggfinal = melted.drop(['sic'], axis=1)
-    aggfinal = aggfinal.groupby(['sector', 'emptype', 'year'] + mycat).sum()
-    aggfinal = aggfinal.reset_index(['sector', 'emptype', 'year'] + mycat)
+    aggfinal = aggfinal.groupby(['sector', 'emptype', 'year', 'region'] + demographics).sum()
+    aggfinal = aggfinal.reset_index(['sector', 'emptype', 'year', 'region'] + demographics)
     
     # add civil society to all_dcms and remove overlap from all_dcms
     aggfinaloverlap = aggfinal.copy()
@@ -252,92 +237,81 @@ def clean_data2(df):
 
 # qualification is only in 2016 and 2017 so exclude
 demographics = ['sex', 'ethnicity', 'dcms_ageband', 'ftpt', 'nssec']
-other_vars = ['sector', ]
+other_vars = ['sector', 'emptype', 'year', 'region']
 
-#cleaned_data2 = [clean_data(i) for i in years]
-#agg = pd.concat(cleaned_data2, ignore_index=True)
+cleaned_data = [clean_data(i) for i in years]
+agg = pd.concat(cleaned_data, ignore_index=True)
 
 #pickle.dump(agg, open("agg.p", "wb"))
-agg = pickle.load(open("agg.p", "rb"))
+#agg = pickle.load(open("agg.p", "rb"))
 
-mycat = demographics + ['region']
+#mycat = demographics + ['region']
 aggfinal = clean_data2(agg)
+aggfinal.columns
 
 
 
-
-
-
-#check = aggfinal.loc[(aggfinal.year == 2016)]
-#check2 = check.drop(['year'], axis = 1)
-#check3 = check2.groupby(['sector', 'region', 'sex']).sum().reset_index()
-#check3.loc[check3.sector == 'overlap']
+# stack demographic cols
+#aggfinalmelt = aggfinal.melt(
+#    other_vars + ['count'],
+#    demographics,
+#    value_name='level', var_name='demographic'
+#).groupby(other_vars + ['demographic', 'level'], as_index=False).sum()
 #
-#check3.groupby(['sector']).size()
-#
-## fill in missing values to avoid problems with NaN
-#agg = agg.fillna(0)
-#
-## sum main and second jobs counts together
-#agg['emp'] = agg['mainemp'] + agg['secondemp']
-#agg['selfemp'] = agg['mainselfemp'] + agg['secondselfemp']
-#agg.drop(['mainemp', 'secondemp', 'mainselfemp', 'secondselfemp'], axis=1, inplace=True)
-#
-#agg = agg[['sector', 'sic', 'year', 'emp', 'selfemp'] + mycat]
-#melted = pd.melt(agg, id_vars=['sector', 'sic', 'year'] + mycat, var_name='emptype', value_name='count')  
-#
-## need to aggregate before we can add civil society to all_dcms?
-#
-## reduce down to desired aggregate
-#aggfinal = melted.drop(['sic'], axis=1)
-#aggfinal = aggfinal.groupby(['sector', 'emptype', 'year'] + demographics + ['region']).sum()
-#aggfinal = aggfinal.reset_index(['sector', 'emptype', 'year'] + demographics + ['region'])
-#
-#
-#
-#
-#
-## add civil society to all_dcms and remove overlap from all_dcms
-#aggfinaloverlap = aggfinal.copy()
-##    aggfinaloverlap = aggfinaloverlap.reset_index(drop=True)
-#
-#alldcmsindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'all_dcms'].index
-#csindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'civil_society'].index
-#overlapindex = aggfinaloverlap[aggfinaloverlap['sector'] == 'overlap'].index
-#newalldcms = aggfinaloverlap.loc[alldcmsindex, ['count']].reset_index(drop=True) + aggfinaloverlap.loc[csindex, ['count']].reset_index(drop=True) - aggfinaloverlap.loc[overlapindex, ['count']].reset_index(drop=True)
-#
-#newalldcms2 = newalldcms['count']
-#newalldcms3 = np.array(newalldcms2)
-#len(newalldcms3)
-#aggfinaloverlap.loc[alldcmsindex, ['count']] = newalldcms3
+#aggfinalmelt = aggfinalmelt.fillna(0)
+#check = aggfinalmelt.loc[(aggfinalmelt.demographic == 'sex') & (aggfinalmelt.year == 2016)]
 
 
 
 
 
-
-
-
-
-
+# anonymisation
+#tb[tb < 6000] = 0
+#check = aggfinal.copy()
+#check.loc[pd.isnull(check.count)] = 0
+#check['count'] = check['count'].astype(int)
+#check = aggfinal.loc[aggfinal.count < 0]
+#aggfinal.dtypes
 
 # make tables
 
 # anonymisation - to reduce the amount of anonymisation needed, the data has been structured to not allow comparison of multiple demographics - this is conistent with the current excel publication.
 
-def make_table(index, columns, sub_col, sub_value):
+def make_table(index, columns, sub_col=None, sub_value=None):
+    
     
     # user specified subset data
-    agg_temp = aggfinal.loc[aggfinal[sub_col] == sub_value]
+    if sub_col:
+        mydf = pd.read_csv('agg_csvs/' + '_'.join(sorted(index + columns + [sub_col])) + '.csv')
+        agg_temp = mydf.loc[mydf[sub_col] == sub_value]
+    else:
+        agg_temp = pd.read_csv('agg_csvs/' + '_'.join(sorted(index + columns)) + '.csv')
     # for non sector breakdowns, subset data to only inlcude 'all_dcms' sector
     if 'sector' not in index and 'sector' not in columns:
         agg_temp = agg_temp.loc[agg_temp.sector == 'all_dcms']
     
+#    idemo = [d for d in index if d in demographics]
+#    cdemo = [d for d in columns if d in demographics]
+#    index2 = index
+#    columns2 = columns
+#    if idemo and cdemo:
+#        print('tooooo many demographics')
+#    if idemo:
+#        agg_temp = agg_temp.loc[agg_temp.demographic == idemo[0]]
+#        index2 = ['level' if d==idemo[0] else d for d in index]
+#        
+#    if cdemo:
+#        agg_temp = agg_temp.loc[agg_temp.demographic == cdemo[0]]
+#        columns2 = ['level' if d==cdemo[0] else d for d in columns]
+
+    
+    # pd.crosstab() only accepts lists of series not subsetted dataframes
+#    sindex = [agg_temp[col] for col in index2]
+#    scolumns = [agg_temp[col] for col in columns2]
     
     # pd.crosstab() only accepts lists of series not subsetted dataframes
     sindex = [agg_temp[col] for col in index]
-    scolumns = [agg_temp[col] for col in columns]
-    
+    scolumns = [agg_temp[col] for col in columns]    
     # create table
     tb = pd.crosstab(index=sindex, columns=scolumns, values=agg_temp['count'], aggfunc='sum')
     
@@ -359,8 +333,6 @@ def make_table(index, columns, sub_col, sub_value):
         else:
             tb = tb.reindex(orderings[i], axis=1)
     
-    # anonymise
-    #tb[tb < 6000] = 0
     
     # round and convert to 000's
     tb = round(tb / 1000, 0).astype(int)
@@ -368,7 +340,54 @@ def make_table(index, columns, sub_col, sub_value):
     return tb
 
 
-#tb = make_table(['sector'], ['emptype', 'sex'], 'year', 2016)
+
+
+
+#demographics
+#other_vars
+#demographics + other_vars
+#combo_vars = ['sector', 'emptype', 'year', 'region', 'demographic', 'gap']
+#combo_vars = ['emptype', 'year', 'sector']
+#len(combo_vars) # 6. 7 is 5k+, 8 is 40k+
+
+from itertools import chain, combinations
+# find all powersets - from https://docs.python.org/3/library/itertools.html#itertools-recipes
+def powerset(iterable):
+    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+
+
+make_table_combos = [list(x) for x in powerset(demographics + other_vars)]
+len(make_table_combos)
+combo = ['sector', 'ethnicity', 'year']
+def reduce_and_save_data(combo):
+    mydf = aggfinal.groupby(combo)['count'].sum().reset_index()
+    mydf.loc[mydf['count'] < 6000, 'count'] = 0    
+    mydf.to_csv('agg_csvs/' + '_'.join(sorted(combo)) + '.csv')
+
+
+#for com in make_table_combos[1:]:
+#    reduce_and_save_data(com)
+
+aggfinal.columns
+make_table(['sector', 'ethnicity'], ['year'])
+make_table(['sector', 'ethnicity'], ['emptype', 'sex'], 'year', 2017)
+
+
+#demo = [d for d in ['emptype', 'sex'] if d in demographics]
+#columns = ['emptype', 'sex']
+#columns = ['level' if d==demo[0] else d for d in columns]
+#if demo:
+#    print(5)
+#demo[0]
+#one = []
+#two = []
+#three = one + two
+#if three:
+#    print(5)
+
+#tb_back = make_table(['sector'], ['sex'], 'year', 2016)
 #tb = make_table(['sector'], ['emptype'], 'year', 2016)
 #tb = make_table(['region', 'sector'], ['emptype'], 'year', 2016)
 
@@ -414,7 +433,7 @@ def read_xl_pub(wsname, startrow, finishrow, cols):
 wb = load_workbook('DCMS_Sectors_Economic_Estimates_Employment_2016_tables.xlsx')
 py_tbs = dict(
     sex = make_table(['sector'], ['sex'], 'year', 2016)[0:7],
-    region = make_table(['region'], ['emptype'], 'year', 2016),
+#    region = make_table(['region'], ['emptype'], 'year', 2016),
 )
 xl_tbs = dict(
     sex = read_xl_pub(wsname = "3.5 - Gender (000's)", startrow = 9, finishrow = 15, cols = ['l', 'n']),
